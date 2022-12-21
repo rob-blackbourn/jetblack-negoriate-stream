@@ -133,7 +133,7 @@ if __name__ == '__main__':
 ### Alternative Async Client
 
 The following client follows the patterns demonstrated in the asyncio library using `open_negotiate_stream`. This follows
-the conventions of the asyncio `open_connection` function. The negotiation happens before the function returns, resulting in tidier code. 
+the conventions of the asyncio `open_connection` function. The negotiation happens before the function returns, resulting in cleaner code. 
 
 ```python
 import asyncio
