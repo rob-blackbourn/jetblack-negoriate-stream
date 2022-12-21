@@ -1,4 +1,4 @@
-"""NegotiateStreamAsync"""
+"""An async version of NegotiateStream"""
 
 from asyncio import StreamReader, StreamWriter
 import logging

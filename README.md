@@ -48,7 +48,7 @@ namespace NegotiateStreamServer
                         stream.RemoteIdentity.AuthenticationType);
 
                     var buf = new byte[4096];
-                    for (var i = 0; i < 4; ++i)
+                    for (var i = 0; i < 3; ++i)
                     {
                         var bytesRead = stream.Read(buf, 0, buf.Length);
                         var message = Encoding.UTF8.GetString(buf, 0, bytesRead);
@@ -69,16 +69,12 @@ namespace NegotiateStreamServer
 
 ### Client
 
-A Python echo client.
+A synchronous Python echo client using sockets.
 
 ```python
-"""Example"""
-
-import logging
 import socket
 
 from jetblack_negotiate_stream import NegotiateStream
-
 
 def main():
     hostname = socket.gethostname()
@@ -98,13 +94,72 @@ def main():
             response = stream.read()
             print("Received: ", response)
 
-    print("Done")
-
-
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
     main()
 ```
+
+### Async Client
+
+An asynchronous version of the synchronous socket class.
+
+```python
+import asyncio
+import socket
+
+from jetblack_negotiate_stream import NegotiateStreamAsync
+
+async def main():
+    hostname = socket.gethostname()
+    port = 8181
+
+    reader, writer = await asyncio.open_connection(hostname, port)
+
+    stream = NegotiateStreamAsync(hostname, reader, writer)
+
+    await stream.authenticate_as_client()
+    for data in (b'first line', b'second line', b'third line'):
+        stream.write(data)
+        await stream.drain()
+        response = await stream.read()
+        print("Received: ", response)
+
+    stream.close()
+    await stream.wait_closed()
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+### Alternative Async Client
+
+The following client follows the patterns demonstrated in the asyncio library.
+
+```python
+import asyncio
+import socket
+
+from jetblack_negotiate_stream import open_negotiate_stream
+
+async def main():
+    hostname = socket.gethostname()
+    port = 8181
+
+    # Following the same pattern as asyncio.open_connection.
+    reader, writer = await open_negotiate_stream(hostname, port)
+
+    for data in (b'first line', b'second line', b'third line'):
+        writer.write(data)
+        await writer.drain()
+        response = await reader.read()
+        print("Received: ", response)
+
+    writer.close()
+    await writer.wait_closed()
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
 
 ## Acknowledgements
 
