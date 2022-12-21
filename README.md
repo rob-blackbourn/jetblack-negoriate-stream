@@ -1,6 +1,9 @@
 # jetblack-negotiate-stream
 
-A Python client for .Net NegotiateStream.
+A Python client for .Net [NegotiateStream](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.negotiatestream).
+It supports single sign on (SSO) and encryption.
+
+This was tested using Python 3.8 on Windows 11.
 
 ## Example
 
@@ -103,3 +106,7 @@ if __name__ == '__main__':
     main()
 ```
 
+## Acknowledgements
+
+The library uses the [pyspnego](https://github.com/jborean93/pyspnego) library,
+and takes many ideas from [net.tcp-proxy](https://github.com/ernw/net.tcp-proxy).
