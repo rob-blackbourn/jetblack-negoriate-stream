@@ -61,6 +61,7 @@ class NegotiateStream(Stream):
             LOGGER.debug('Doing step')
             out_token = self._client.step(in_token)
             if not self._client.complete:
+                assert out_token is not None, "a valid step should create a token"
                 self.write(out_token)
                 in_token = self.read()
 

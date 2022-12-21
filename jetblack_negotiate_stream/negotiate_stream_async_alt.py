@@ -1,4 +1,4 @@
-"""NegotiateStream"""
+"""A more pythonic asyncio solution"""
 
 import asyncio
 from asyncio import StreamReader, StreamWriter
@@ -111,9 +111,9 @@ async def open_negotiate_stream(
         LOGGER.debug('Doing step')
         out_token = context.client.step(in_token)
         if not context.client.complete:
-            if out_token is not None:
-                writer.write(out_token)
-                await writer.drain()
+            assert out_token is not None, "a valid step should create a token"
+            writer.write(out_token)
+            await writer.drain()
             in_token = await reader.read()
 
     LOGGER.debug("Handshake complete")
