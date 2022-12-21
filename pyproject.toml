@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "jetblack-negotiate-stream"
+version = "0.1.0"
+description = "A python client for .Net NegotiateStream"
+authors = ["Rob Blackbourn <rob.blackbourn@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [
+    { include = "jetblack_negotiate_stream" }
+]
+repository = "https://github.com/rob-blackbourn/jetblack-negotiate-stream"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pyspnego = "^0.7"
+
+[tool.poetry.dev-dependencies]
+autopep8 = "^1"
+pylint = "^2.9"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
