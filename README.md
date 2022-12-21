@@ -1,6 +1,7 @@
 # jetblack-negotiate-stream
 
-A Python client for .Net [NegotiateStream](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.negotiatestream).
+A Python client for .Net
+[NegotiateStream](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.negotiatestream).
 It supports single sign on (SSO) and encryption.
 
 This was tested using Python 3.8 on Windows 11.
@@ -19,7 +20,9 @@ The following programs provide a simple echo server in C# and client in Python.
 
 ### Client
 
-This is an example of a Python client using the synchronous `NegotiateStream` class. Note the call to `authenticate_as_client` before reading and writing.
+This is an example of a Python client using the synchronous
+`NegotiateStream` class. Note the call to `authenticate_as_client` before
+reading and writing.
 
 ```python
 import socket
@@ -50,7 +53,8 @@ if __name__ == '__main__':
 
 ### Async Client
 
-This program uses `NegotiateStreamAsync` which is simply a synchronous version of the `NegotiateStream` class demonstrated above.
+This program uses `NegotiateStreamAsync` which is simply an asynchronous
+version of the `NegotiateStream` class demonstrated above.
 
 ```python
 import asyncio
@@ -82,8 +86,10 @@ if __name__ == '__main__':
 
 ### Alternative Async Client
 
-The following client follows the patterns demonstrated in the asyncio library using `open_negotiate_stream`. This follows
-the conventions of the asyncio `open_connection` function. The negotiation happens before the function returns, resulting in cleaner code. 
+The following client follows the patterns demonstrated in the asyncio library
+using `open_negotiate_stream`. This follows the conventions of the asyncio
+`open_connection` function. The negotiation happens before the function
+returns, resulting in cleaner code. 
 
 ```python
 import asyncio
