@@ -5,6 +5,14 @@ It supports single sign on (SSO) and encryption.
 
 This was tested using Python 3.8 on Windows 11.
 
+## Installation
+
+Install from pypi.
+
+```bash
+pip install jetblack-negotiate-stream
+```
+
 ## Example
 
 The following programs provide a simple echo server in C# and client in Python.
