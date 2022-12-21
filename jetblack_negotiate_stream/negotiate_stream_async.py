@@ -2,7 +2,6 @@
 
 from asyncio import StreamReader, StreamWriter
 import logging
-import socket
 import struct
 from typing import Optional
 
@@ -72,8 +71,9 @@ class NegotiateStreamAsync:
             LOGGER.debug('Doing step')
             out_token = self._client.step(in_token)
             if not self._client.complete:
-                self.write(out_token)
-                await self.drain()
+                if out_token is not None:
+                    self.write(out_token)
+                    await self.drain()
                 in_token = await self.read()
 
         LOGGER.debug("Handshake complete")

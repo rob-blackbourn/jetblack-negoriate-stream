@@ -1,4 +1,4 @@
-"""Example"""
+"""Example using a socket"""
 
 import logging
 import socket

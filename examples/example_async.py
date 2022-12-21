@@ -1,4 +1,4 @@
-"""Example"""
+"""Example using an async stream"""
 
 import asyncio
 import logging
