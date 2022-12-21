@@ -9,64 +9,6 @@ This was tested using Python 3.8 on Windows 11.
 
 The following programs provide a simple echo server in C# and client in Python.
 
-### Server
-
-Here is a trivial C# echo server.
-
-```csharp
-using System;
-using System.Net;
-using System.Net.Security;
-using System.Net.Sockets;
-using System.Text;
-
-namespace NegotiateStreamServer
-{
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-            var listener = new TcpListener(IPAddress.Any, 8181);
-            listener.Start();
-
-            while (true)
-            {
-                Console.WriteLine("Listening ...");
-                var client = listener.AcceptTcpClient();
-
-                try
-                {
-                    Console.WriteLine("... Client connected.");
-
-                    Console.WriteLine("Authenticating...");
-                    var stream = new NegotiateStream(client.GetStream(), false);
-                    stream.AuthenticateAsServer();
-
-                    Console.WriteLine(
-                        "... {0} authenticated using {1}",
-                        stream.RemoteIdentity.Name,
-                        stream.RemoteIdentity.AuthenticationType);
-
-                    var buf = new byte[4096];
-                    for (var i = 0; i < 3; ++i)
-                    {
-                        var bytesRead = stream.Read(buf, 0, buf.Length);
-                        var message = Encoding.UTF8.GetString(buf, 0, bytesRead);
-                        Console.WriteLine(message);
-                        stream.Write(buf, 0, bytesRead);
-                    }
-                    stream.Close();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-        }
-    }
-}
-```
-
 ### Client
 
 This is an example of a Python client using the synchronous `NegotiateStream` class. Note the call to `authenticate_as_client` before reading and writing.
@@ -161,6 +103,63 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+### Server
+
+Here is a trivial C# echo server for the clients.
+
+```csharp
+using System;
+using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Text;
+
+namespace NegotiateStreamServer
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var listener = new TcpListener(IPAddress.Any, 8181);
+            listener.Start();
+
+            while (true)
+            {
+                Console.WriteLine("Listening ...");
+                var client = listener.AcceptTcpClient();
+
+                try
+                {
+                    Console.WriteLine("... Client connected.");
+
+                    Console.WriteLine("Authenticating...");
+                    var stream = new NegotiateStream(client.GetStream(), false);
+                    stream.AuthenticateAsServer();
+
+                    Console.WriteLine(
+                        "... {0} authenticated using {1}",
+                        stream.RemoteIdentity.Name,
+                        stream.RemoteIdentity.AuthenticationType);
+
+                    var buf = new byte[4096];
+                    for (var i = 0; i < 3; ++i)
+                    {
+                        var bytesRead = stream.Read(buf, 0, buf.Length);
+                        var message = Encoding.UTF8.GetString(buf, 0, bytesRead);
+                        Console.WriteLine(message);
+                        stream.Write(buf, 0, bytesRead);
+                    }
+                    stream.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+        }
+    }
+}
+```
 
 ## Acknowledgements
 
