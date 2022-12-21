@@ -69,7 +69,7 @@ namespace NegotiateStreamServer
 
 ### Client
 
-A synchronous Python echo client using sockets.
+This is an example of a Python client using the synchronous `NegotiateStream` class. Note the call to `authenticate_as_client` before reading and writing.
 
 ```python
 import socket
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
 ### Async Client
 
-An asynchronous version of the synchronous socket class.
+This program uses `NegotiateStreamAsync` which is simply a synchronous version of the `NegotiateStream` class demonstrated above.
 
 ```python
 import asyncio
@@ -132,7 +132,8 @@ if __name__ == '__main__':
 
 ### Alternative Async Client
 
-The following client follows the patterns demonstrated in the asyncio library.
+The following client follows the patterns demonstrated in the asyncio library using `open_negotiate_stream`. This follows
+the conventions of the asyncio `open_connection` function. The negotiation happens before the function returns, resulting in tidier code. 
 
 ```python
 import asyncio
