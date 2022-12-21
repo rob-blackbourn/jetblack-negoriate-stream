@@ -86,8 +86,11 @@ def main():
 
         stream = NegotiateStream(hostname, sock)
 
-        stream.negotiate_as_client()
+        # Do the client side negotiate handshake.
+        stream.authenticate_as_client()
+
         for data in (b'first line', b'second line', b'third line'):
+            # All reads and writes are encrypted.
             stream.write(data)
             response = stream.read()
             print("Received: ", response)

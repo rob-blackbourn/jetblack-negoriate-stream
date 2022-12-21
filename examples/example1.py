@@ -15,7 +15,7 @@ def main():
 
         stream = NegotiateStream(hostname, sock)
 
-        stream.negotiate_as_client()
+        stream.authenticate_as_client()
         for data in (b'first line', b'second line', b'third line'):
             stream.write(data)
             response = stream.read()

@@ -55,7 +55,7 @@ class NegotiateStream(Stream):
         _, error = struct.unpack('>II', payload)
         raise IOError(f"Negotiate error: {error}")
 
-    def negotiate_as_client(self) -> None:
+    def authenticate_as_client(self) -> None:
         in_token: Optional[bytes] = None
         while not self._client.complete:
             LOGGER.debug('Doing step')
