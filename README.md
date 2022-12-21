@@ -11,7 +11,7 @@ The following programs provide a simple echo server in C# and client in Python.
 
 ### Server
 
-A trivial C# echo server.
+Here is a trivial C# echo server.
 
 ```csharp
 using System;
