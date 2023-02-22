@@ -70,7 +70,7 @@ class NegotiateStreamWriter:
         self._writer = writer
 
     async def drain(self) -> None:
-        self._writer.drain()
+        await self._writer.drain()
 
     def close(self) -> None:
         self._writer.close()

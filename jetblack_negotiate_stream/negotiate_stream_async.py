@@ -63,7 +63,7 @@ class NegotiateStreamAsync:
         raise IOError(f"Negotiate error: {error}")
 
     async def drain(self) -> None:
-        self._writer.drain()
+        await self._writer.drain()
 
     async def authenticate_as_client(self) -> None:
         in_token: Optional[bytes] = None
