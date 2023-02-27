@@ -8,6 +8,7 @@ from asyncio import (
     LimitOverrunError
 )
 import logging
+import socket
 import struct
 from typing import Iterable, Optional, Tuple
 
@@ -253,7 +254,7 @@ async def open_negotiate_stream(
 ) -> Tuple[StreamReaderWrapper, StreamWriterWrapper]:
     stream_reader, stream_writer = await asyncio.open_connection(host, port)
 
-    context = NegotiateStreamContext(host)
+    context = NegotiateStreamContext(socket.gethostname())
     reader = NegotiateStreamReader(context, stream_reader)
     writer = NegotiateStreamWriter(context, stream_writer)
 

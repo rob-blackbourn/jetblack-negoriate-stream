@@ -18,7 +18,7 @@ class NegotiateStream(Stream):
     def __init__(self, hostname: str, socket_: socket.socket) -> None:
         super().__init__(socket_)
         self._handshake_state = HandshakeState.IN_PROGRESS
-        self._client = spnego.client(hostname=hostname)
+        self._client = spnego.client(hostname=socket.gethostname())
 
     def write(self, data: bytes) -> None:
         if self._handshake_state == HandshakeState.IN_PROGRESS:

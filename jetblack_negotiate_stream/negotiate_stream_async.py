@@ -2,6 +2,7 @@
 
 from asyncio import StreamReader, StreamWriter
 import logging
+import socket
 import struct
 from typing import Optional
 
@@ -23,7 +24,7 @@ class NegotiateStreamAsync:
         self._reader = reader
         self._writer = writer
         self._handshake_state = HandshakeState.IN_PROGRESS
-        self._client = spnego.client(hostname=hostname)
+        self._client = spnego.client(hostname=socket.gethostname())
 
     def write(self, data: bytes) -> None:
         if self._handshake_state == HandshakeState.IN_PROGRESS:
