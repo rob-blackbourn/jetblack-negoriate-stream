@@ -1,6 +1,6 @@
 """Stream"""
 
-import select
+from select import select
 import socket
 
 
@@ -13,7 +13,7 @@ class Stream:
         if n == -1:
             self._socket.setblocking(False)
             readable, _, _ = select([self._socket], [], [])
-            if self.socket not in readable:
+            if self._socket not in readable:
                 return b''
             return self._socket.recv(4096)
         else:

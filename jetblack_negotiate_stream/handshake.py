@@ -1,17 +1,23 @@
-"""Handshake"""
+"""The handshake record used in the connection negotiation"""
 
 from __future__ import annotations
 
 import enum
 import struct
 
+
 class HandshakeState(enum.IntEnum):
+    """The handshake state.
+
+    The state is either in-progress, done or error."""
+
     DONE = 0x14
     ERROR = 0x15
     IN_PROGRESS = 0x16
 
 
 class HandshakeRecord:
+    """The record exchanged during the handshake."""
 
     FORMAT = ">BBBH"
 
