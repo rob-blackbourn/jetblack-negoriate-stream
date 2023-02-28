@@ -4,13 +4,16 @@ from asyncio import StreamReader, StreamWriter
 import logging
 import socket
 import struct
-from typing import Optional
+from typing import List, Optional, Union
 
 import spnego
+from spnego import Credential, NegotiateOptions
 
 from .handshake import HandshakeRecord, HandshakeState
 
 LOGGER = logging.getLogger(__name__)
+
+_Username = Union[str, Credential, List[Credential]]
 
 
 class NegotiateStreamAsync:
@@ -20,7 +23,11 @@ class NegotiateStreamAsync:
             reader: StreamReader,
             writer: StreamWriter,
             *,
-            local_hostname: Optional[str] = None
+            username: Optional[_Username] = None,
+            password: Optional[str] = None,
+            local_hostname: Optional[str] = None,
+            protocol: str = "negotiate",
+            options: NegotiateOptions = NegotiateOptions.none,
     ) -> None:
         self._reader = reader
         self._writer = writer
@@ -28,7 +35,13 @@ class NegotiateStreamAsync:
 
         if local_hostname is None:
             local_hostname = socket.gethostname()
-        self._client = spnego.client(hostname=local_hostname)
+        self._client = spnego.client(
+            username,
+            password,
+            local_hostname,
+            protocol=protocol,
+            options=options
+        )
 
     def write(self, data: bytes) -> None:
         if self._handshake_state == HandshakeState.IN_PROGRESS:
