@@ -13,7 +13,7 @@ def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((hostname, port))
 
-        stream = NegotiateStream(hostname, sock)
+        stream = NegotiateStream(sock)
 
         stream.authenticate_as_client()
         for data in (b'first line', b'second line', b'third line'):
