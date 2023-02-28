@@ -23,6 +23,10 @@ _DEFAULT_LIMIT = 2 ** 16
 
 
 class NegotiateStreamContext:
+    """The stream context.
+
+    This contains the handshake state and the SPNEGO client.
+    """
 
     def __init__(
             self,
@@ -46,6 +50,11 @@ class NegotiateStreamContext:
 
 
 class NegotiateStreamReader:
+    """The reader for a negotiate stream.
+
+    Note that data is sent as length delimited packets. This means that
+    convenience methods like "readline" have no meaning in this layer.
+    """
 
     def __init__(
             self,
@@ -55,30 +64,38 @@ class NegotiateStreamReader:
         self._context = context
         self._reader = reader
 
-    async def read(self) -> bytes:
-        if self._context.handshake_state == HandshakeState.DONE:
+    async def _read_data(self) -> bytes:
+        header = await self._reader.readexactly(4)
+        payload_size = struct.unpack('<I', header)[0]
+        payload = await self._reader.readexactly(payload_size)
+        unencrypted = self._context.client.unwrap(payload)
+        return unencrypted.data
 
-            header = await self._reader.readexactly(4)
-            payload_size = struct.unpack('<I', header)[0]
-            payload = await self._reader.readexactly(payload_size)
-            unencrypted = self._context.client.unwrap(payload)
-            return unencrypted.data
-
+    async def _read_handshake(self) -> bytes:
         header_size = struct.calcsize(HandshakeRecord.FORMAT)
         buf = await self._reader.readexactly(header_size)
         handshake = HandshakeRecord.unpack(buf)
 
         self._context.handshake_state = handshake.state
 
-        if self._context.handshake_state != HandshakeState.ERROR:
-            return await self._reader.readexactly(handshake.payload_size)
+        if self._context.handshake_state == HandshakeState.ERROR:
 
-        if handshake.payload_size == 0:
-            raise IOError("Negotiate error")
+            if handshake.payload_size == 0:
+                # No error information was provided.
+                raise IOError("Negotiate error")
+            else:
+                # Unpack the error code.
+                payload = await self._reader.readexactly(handshake.payload_size)
+                _, error = struct.unpack('>II', payload)
+                raise IOError(f"Negotiate error: {error}")
 
-        payload = await self._reader.readexactly(handshake.payload_size)
-        _, error = struct.unpack('>II', payload)
-        raise IOError(f"Negotiate error: {error}")
+        return await self._reader.readexactly(handshake.payload_size)
+
+    async def read(self) -> bytes:
+        if self._context.handshake_state == HandshakeState.DONE:
+            return await self._read_data()
+        else:
+            return await self._read_handshake()
 
 
 class NegotiateStreamWriter:
@@ -100,22 +117,28 @@ class NegotiateStreamWriter:
     async def wait_closed(self) -> None:
         await self._writer.wait_closed()
 
+    def _write_handshake(self, data: bytes) -> None:
+        handshake = HandshakeRecord(
+            self._context.handshake_state,
+            1,
+            0,
+            len(data)
+        )
+        header = handshake.pack()
+        self._writer.write(header + data)
+
+    def _write_data(self, data: bytes) -> None:
+        while data:
+            chunk = self._context.client.wrap(data[:0xFC30])
+            header = struct.pack('<I', len(chunk.data))
+            self._writer.write(header + chunk.data)
+            data = data[0xFC30:]
+
     def write(self, data: bytes) -> None:
         if self._context.handshake_state == HandshakeState.IN_PROGRESS:
-            handshake = HandshakeRecord(
-                self._context.handshake_state,
-                1,
-                0,
-                len(data)
-            )
-            header = handshake.pack()
-            self._writer.write(header + data)
+            self._write_handshake(data)
         else:
-            while data:
-                chunk = self._context.client.wrap(data[:0xFC30])
-                header = struct.pack('<I', len(chunk.data))
-                self._writer.write(header + chunk.data)
-                data = data[0xFC30:]
+            self._write_data(data)
 
 
 class StreamReaderWrapper:
@@ -215,18 +238,18 @@ class StreamReaderWrapper:
 
             line = await self.readuntil(sep)
 
-        except IncompleteReadError as e:
+        except IncompleteReadError as error:
 
-            return e.partial
+            return error.partial
 
-        except LimitOverrunError as e:
+        except LimitOverrunError as error:
 
-            if self._buffer.startswith(sep, e.consumed):
-                del self._buffer[:e.consumed + len(sep)]
+            if self._buffer.startswith(sep, error.consumed):
+                del self._buffer[:error.consumed + len(sep)]
             else:
                 self._buffer.clear()
 
-            raise ValueError(e.args[0])
+            raise ValueError(error.args[0]) from error
 
         return line
 
