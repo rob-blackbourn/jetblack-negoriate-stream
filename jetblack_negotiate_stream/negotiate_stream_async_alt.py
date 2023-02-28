@@ -22,8 +22,8 @@ LOGGER = logging.getLogger(__name__)
 _DEFAULT_LIMIT = 2 ** 16
 
 
-class NegotiateStreamContext:
-    """The stream context.
+class SpnegoClientContext:
+    """The SPNEGO client context.
 
     This contains the handshake state and the SPNEGO client.
     """
@@ -58,7 +58,7 @@ class NegotiateStreamReader:
 
     def __init__(
             self,
-            context: NegotiateStreamContext,
+            context: SpnegoClientContext,
             reader: StreamReader
     ) -> None:
         self._context = context
@@ -92,6 +92,14 @@ class NegotiateStreamReader:
         return await self._reader.readexactly(handshake.payload_size)
 
     async def read(self) -> bytes:
+        """Read data.
+
+        As the data is length delimited, the size of each packet is determined
+        by the sender.
+
+        Returns:
+            bytes: A packet of data.
+        """
         if self._context.handshake_state == HandshakeState.DONE:
             return await self._read_data()
         else:
@@ -99,10 +107,11 @@ class NegotiateStreamReader:
 
 
 class NegotiateStreamWriter:
+    """A writer for the negotiate stream protocol"""
 
     def __init__(
             self,
-            context: NegotiateStreamContext,
+            context: SpnegoClientContext,
             writer: StreamWriter
     ) -> None:
         self._context = context
@@ -142,8 +151,18 @@ class NegotiateStreamWriter:
 
 
 class StreamReaderWrapper:
+    """A wrapper around the negotiate stream reader to implement StreamReader
+    methods.
 
-    def __init__(self, reader: NegotiateStreamReader, limit: int = _DEFAULT_LIMIT) -> None:
+    The reader for negotiate stream is packet oriented, where each packet is
+    size delimited. This wrapper provides methods like readline and readexactly.
+    """
+
+    def __init__(
+            self,
+            reader: NegotiateStreamReader,
+            limit: int = _DEFAULT_LIMIT
+    ) -> None:
         self._reader = reader
         self._limit = limit
         self._buffer = bytearray()
@@ -264,6 +283,11 @@ class StreamReaderWrapper:
 
 
 class StreamWriterWrapper:
+    """A wrapper for the negotiate stream writer.
+
+    As the protocol only writes length delimited packets a wrapper is required
+    to implement convenience methods like writelines.
+    """
 
     def __init__(self, writer: NegotiateStreamWriter) -> None:
         self._writer = writer
@@ -285,6 +309,24 @@ class StreamWriterWrapper:
         await self._writer.wait_closed()
 
 
+async def _perform_handshake(
+        reader: NegotiateStreamReader,
+        writer: NegotiateStreamWriter,
+        context: SpnegoClientContext
+) -> None:
+    in_token: Optional[bytes] = None
+    while not context.client.complete:
+        LOGGER.debug('Doing step')
+        out_token = context.client.step(in_token)
+        if not context.client.complete:
+            assert out_token is not None, "a valid step should create a token"
+            writer.write(out_token)
+            await writer.drain()
+            in_token = await reader.read()
+
+    LOGGER.debug("Handshake complete")
+
+
 async def open_negotiate_stream(
         host: str,
         port: int,
@@ -297,7 +339,7 @@ async def open_negotiate_stream(
 ) -> Tuple[StreamReaderWrapper, StreamWriterWrapper]:
     stream_reader, stream_writer = await asyncio.open_connection(host, port)
 
-    context = NegotiateStreamContext(
+    context = SpnegoClientContext(
         username,
         password,
         local_hostname,
@@ -307,16 +349,6 @@ async def open_negotiate_stream(
     reader = NegotiateStreamReader(context, stream_reader)
     writer = NegotiateStreamWriter(context, stream_writer)
 
-    in_token: Optional[bytes] = None
-    while not context.client.complete:
-        LOGGER.debug('Doing step')
-        out_token = context.client.step(in_token)
-        if not context.client.complete:
-            assert out_token is not None, "a valid step should create a token"
-            writer.write(out_token)
-            await writer.drain()
-            in_token = await reader.read()
-
-    LOGGER.debug("Handshake complete")
+    await _perform_handshake(reader, writer, context)
 
     return StreamReaderWrapper(reader), StreamWriterWrapper(writer)
