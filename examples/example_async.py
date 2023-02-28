@@ -13,7 +13,7 @@ async def main():
 
     reader, writer = await asyncio.open_connection(hostname, port)
 
-    stream = NegotiateStreamAsync(hostname, reader, writer)
+    stream = NegotiateStreamAsync(reader, writer)
 
     await stream.authenticate_as_client()
     for data in (b'first line', b'second line', b'third line'):

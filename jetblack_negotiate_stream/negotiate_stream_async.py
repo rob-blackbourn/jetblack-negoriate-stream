@@ -17,14 +17,18 @@ class NegotiateStreamAsync:
 
     def __init__(
             self,
-            hostname: str,
             reader: StreamReader,
-            writer: StreamWriter
+            writer: StreamWriter,
+            *,
+            local_hostname: Optional[str] = None
     ) -> None:
         self._reader = reader
         self._writer = writer
         self._handshake_state = HandshakeState.IN_PROGRESS
-        self._client = spnego.client(hostname=socket.gethostname())
+
+        if local_hostname is None:
+            local_hostname = socket.gethostname()
+        self._client = spnego.client(hostname=local_hostname)
 
     def write(self, data: bytes) -> None:
         if self._handshake_state == HandshakeState.IN_PROGRESS:

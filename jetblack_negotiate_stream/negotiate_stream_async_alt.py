@@ -10,9 +10,10 @@ from asyncio import (
 import logging
 import socket
 import struct
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 import spnego
+from spnego import Credential, NegotiateOptions
 
 from .handshake import HandshakeRecord, HandshakeState
 
@@ -25,10 +26,23 @@ class NegotiateStreamContext:
 
     def __init__(
             self,
-            hostname: str,
+            username: Optional[Union[str, Credential, List[Credential]]],
+            password: Optional[str],
+            hostname: Optional[str],
+            protocol: str,
+            options: NegotiateOptions,
     ) -> None:
         self.handshake_state = HandshakeState.IN_PROGRESS
-        self.client = spnego.client(hostname=hostname)
+
+        if hostname is None:
+            hostname = socket.gethostname()
+        self.client = spnego.client(
+            username,
+            password,
+            hostname,
+            protocol=protocol,
+            options=options
+        )
 
 
 class NegotiateStreamReader:
@@ -250,11 +264,23 @@ class StreamWriterWrapper:
 
 async def open_negotiate_stream(
         host: str,
-        port: int
+        port: int,
+        *,
+        username: Optional[Union[str, Credential, List[Credential]]] = None,
+        password: Optional[str] = None,
+        local_hostname: Optional[str] = None,
+        protocol: str = "negotiate",
+        options: NegotiateOptions = NegotiateOptions.none,
 ) -> Tuple[StreamReaderWrapper, StreamWriterWrapper]:
     stream_reader, stream_writer = await asyncio.open_connection(host, port)
 
-    context = NegotiateStreamContext(socket.gethostname())
+    context = NegotiateStreamContext(
+        username,
+        password,
+        local_hostname,
+        protocol,
+        options
+    )
     reader = NegotiateStreamReader(context, stream_reader)
     writer = NegotiateStreamWriter(context, stream_writer)
 
