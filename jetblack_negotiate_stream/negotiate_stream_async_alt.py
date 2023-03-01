@@ -10,7 +10,7 @@ from asyncio import (
 import logging
 import socket
 import struct
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import spnego
 from spnego import Credential, NegotiateOptions
@@ -118,12 +118,21 @@ class NegotiateStreamWriter:
         self._writer = writer
 
     async def drain(self) -> None:
+        """Wait until it is appropriate to resume writing to the stream.
+        """
         await self._writer.drain()
 
     def close(self) -> None:
+        """The method closes the stream and the underlying socket.
+
+        The method should be used, though not mandatory, along with the
+        wait_closed() method.
+        """
         self._writer.close()
 
     async def wait_closed(self) -> None:
+        """Wait until the stream is closed.
+        """
         await self._writer.wait_closed()
 
     def _write_handshake(self, data: bytes) -> None:
@@ -144,10 +153,33 @@ class NegotiateStreamWriter:
             data = data[0xFC30:]
 
     def write(self, data: bytes) -> None:
+        """The method attempts to write the data to the underlying socket
+        immediately. If that fails, the data is queued in an internal write
+        buffer until it can be sent.
+
+        Args:
+            data (bytes): The data to write.
+        """
         if self._context.handshake_state == HandshakeState.IN_PROGRESS:
             self._write_handshake(data)
         else:
             self._write_data(data)
+
+    def get_extra_info(self, name: str, default=None) -> Any:
+        """Access optional transport information.
+
+        Args:
+            name (str): The name of the information to get.
+            default (_type_, optional): The value to return if the information
+                is not available. Defaults to None.
+
+        Returns:
+            Any: The equested information, or the default value.
+        """
+        if name == "negotiated_protocol":
+            return self._context.client.negotiated_protocol
+        else:
+            return self._context.client.get_extra_info(name, default)
 
 
 class StreamReaderWrapper:
@@ -176,9 +208,32 @@ class StreamReaderWrapper:
             self._eof = True
 
     def at_eof(self) -> bool:
+        """Return True if the buffer is empty and feed_eof() was called.
+
+        Returns:
+            bool: True if the stream has reached the end of the file.
+        """
         return self._eof and len(self._buffer) == 0
 
     async def read(self, n: int = -1) -> bytes:
+        """Read up to n bytes from the stream.
+
+        If n is not provided or set to -1, read until EOF, then return all
+        read bytes. If EOF was received and the internal buffer is empty,
+        return an empty bytes object.
+
+        If n is 0, return an empty bytes object immediately.
+
+        If n is positive, return at most n available bytes as soon as at least
+         1 byte is available in the internal buffer. If EOF is received before
+         any byte is read, return an empty bytes object.
+
+        Args:
+            n (int, optional): The number of bytes to read. Defaults to -1.
+
+        Returns:
+            bytes: The bytes read.
+        """
         if n == 0:
             return b''
 
@@ -195,6 +250,19 @@ class StreamReaderWrapper:
         return buf
 
     async def readexactly(self, n: int) -> bytes:
+        """Read exactly n bytes.
+
+        Args:
+            n (int): The number of bytes to read.
+
+        Raises:
+            ValueError: If the number of bytes is negative.
+            IncompleteReadError: If the end of the file was reached before the
+                requested number of bytes could be read.
+
+        Returns:
+            bytes: The data that was read.
+        """
         if n < 0:
             raise ValueError('readexactly size can not be less than zero')
 
@@ -211,6 +279,21 @@ class StreamReaderWrapper:
         return chunk
 
     async def readuntil(self, separator: bytes = b'\n') -> bytes:
+        """Read data from the stream until separator is found.
+
+        Args:
+            separator (bytes, optional): The separator. Defaults to b'\n'.
+
+        Raises:
+            ValueError: If the separator is an empty byte.
+            LimitOverrunError: If the amount of data read exceeds the configured
+                stream limit.
+            IncompleteReadError: If the end of the file was reached before the
+                separator was found.
+
+        Returns:
+            bytes: The data that was read.
+        """
         seplen = len(separator)
         if seplen == 0:
             raise ValueError('Separator should be at least one-byte string')
@@ -251,6 +334,15 @@ class StreamReaderWrapper:
         return bytes(chunk)
 
     async def readline(self) -> bytes:
+        """Read one line, where “line” is a sequence of bytes ending with \n.
+
+        Raises:
+            ValueError: If the amount of data read exceeds the configured
+                stream limit.
+
+        Returns:
+            bytes: The bytes read.
+        """
         sep = b'\n'
 
         try:
@@ -293,20 +385,55 @@ class StreamWriterWrapper:
         self._writer = writer
 
     def write(self, data: bytes) -> None:
+        """The method attempts to write the data to the underlying socket
+        immediately. If that fails, the data is queued in an internal write
+        buffer until it can be sent.
+
+        The method should be used along with the drain() method.
+
+        Args:
+            data (bytes): The data to write.
+        """
         self._writer.write(data)
 
     def writelines(self, lines: Iterable[bytes]) -> None:
+        """The method writes a list (or any iterable) of bytes to the underlying
+        socket immediately. If that fails, the data is queued in an internal
+         write buffer until it can be sent.
+
+        Args:
+            lines (Iterable[bytes]): An iterable of lines read.
+        """
         for line in lines:
             self._writer.write(line)
 
     async def drain(self) -> None:
+        """Wait until it is appropriate to resume writing to the stream.
+        """
         await self._writer.drain()
 
-    def close(self):
+    def close(self) -> None:
+        """The method closes the stream and the underlying socket.
+        """
         self._writer.close()
 
     async def wait_closed(self) -> None:
+        """Wait until the stream is closed.
+        """
         await self._writer.wait_closed()
+
+    def get_extra_info(self, name: str, default: Any = None) -> Any:
+        """Access optional transport information.
+
+        Args:
+            name (str): The name of the information to get.
+            default (_type_, optional): The value to return if the information
+                is not available. Defaults to None.
+
+        Returns:
+            Any: The equested information, or the default value.
+        """
+        return self._writer.get_extra_info(name, default)
 
 
 async def _perform_handshake(
@@ -337,6 +464,30 @@ async def open_negotiate_stream(
         protocol: str = "negotiate",
         options: NegotiateOptions = NegotiateOptions.none,
 ) -> Tuple[StreamReaderWrapper, StreamWriterWrapper]:
+    """Establish a network connection and return a pair of (reader, writer)
+    objects using the negotiate protocol for authentication.
+
+    Args:
+        host (str): The remote host.
+        port (int): The port on the remote host.
+        username (Optional[Union[str, Credential, List[Credential]]], optional):
+            The username/credential(s) to authenticate with. Certain providers
+            can use a cache if omitted. Defaults to None.
+        password (Optional[str], optional): The password to authenticate with.
+            Should only be specified when username is a string. Defaults to
+            None.
+        local_hostname (Optional[str], optional): The principal part of the SPN.
+            Defaults to None.
+        protocol (str, optional): The protocol to authenticate with, can be
+            `ntlm`, `kerberos`, `negotiate`, or `credssp`. Defaults to "negotiate".
+        options (NegotiateOptions, optional): The `spnego.NegotiateOptions`
+            that define pyspnego specific options to control the negotiation.
+            Defaults to `NegotiateOptions.none`.
+
+    Returns:
+        Tuple[StreamReaderWrapper, StreamWriterWrapper]: The reader and writer
+            of the stream.
+    """
     stream_reader, stream_writer = await asyncio.open_connection(host, port)
 
     context = SpnegoClientContext(

@@ -13,6 +13,10 @@ async def main():
 
     reader, writer = await open_negotiate_stream(hostname, port)
 
+    for name in ["negotiated_protocol", "client_principal"]:
+        value = writer.get_extra_info(name)
+        print(f"{name}={value}")
+
     for data in (b'first line', b'second line', b'third line'):
         writer.write(data)
         await writer.drain()
