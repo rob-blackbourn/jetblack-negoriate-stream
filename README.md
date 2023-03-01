@@ -4,7 +4,10 @@ A Python client for .Net
 [NegotiateStream](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.negotiatestream).
 It supports single sign on (SSO) and encryption.
 
-This was tested using Python 3.8 on Windows 11.
+Three clients are provided: one synchronous and two using asyncio.
+
+This was tested using Python 3.8 on Windows 11. It uses the
+[pyspnego](https://github.com/jborean93/pyspnego) package.
 
 ## Installation
 
@@ -18,7 +21,41 @@ pip install jetblack-negotiate-stream
 
 The following programs provide a simple echo server in C# and client in Python.
 
-### Client
+
+### `open_negotiate_stream`
+
+The following client follows the patterns demonstrated in the asyncio library
+using `open_negotiate_stream`. This follows the conventions of the asyncio
+`open_connection` function. The negotiation happens before the function
+returns, resulting in cleaner code. 
+
+```python
+import asyncio
+import socket
+
+from jetblack_negotiate_stream import open_negotiate_stream
+
+async def main():
+    hostname = socket.gethostname()
+    port = 8181
+
+    # Following the same pattern as asyncio.open_connection.
+    reader, writer = await open_negotiate_stream(hostname, port)
+
+    for data in (b'first line', b'second line', b'third line'):
+        writer.write(data)
+        await writer.drain()
+        response = await reader.read()
+        print("Received: ", response)
+
+    writer.close()
+    await writer.wait_closed()
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+### `NegotiateStream`
 
 This is an example of a Python client using the synchronous
 `NegotiateStream` class. Note the call to `authenticate_as_client` before
@@ -51,7 +88,7 @@ if __name__ == '__main__':
     main()
 ```
 
-### Async Client
+### `NegotiateStreamAsync`
 
 This program uses `NegotiateStreamAsync` which is simply an asynchronous
 version of the `NegotiateStream` class demonstrated above.
@@ -79,39 +116,6 @@ async def main():
 
     stream.close()
     await stream.wait_closed()
-
-if __name__ == '__main__':
-    asyncio.run(main())
-```
-
-### Alternative Async Client
-
-The following client follows the patterns demonstrated in the asyncio library
-using `open_negotiate_stream`. This follows the conventions of the asyncio
-`open_connection` function. The negotiation happens before the function
-returns, resulting in cleaner code. 
-
-```python
-import asyncio
-import socket
-
-from jetblack_negotiate_stream import open_negotiate_stream
-
-async def main():
-    hostname = socket.gethostname()
-    port = 8181
-
-    # Following the same pattern as asyncio.open_connection.
-    reader, writer = await open_negotiate_stream(hostname, port)
-
-    for data in (b'first line', b'second line', b'third line'):
-        writer.write(data)
-        await writer.drain()
-        response = await reader.read()
-        print("Received: ", response)
-
-    writer.close()
-    await writer.wait_closed()
 
 if __name__ == '__main__':
     asyncio.run(main())
